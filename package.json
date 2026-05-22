@@ -1,0 +1,13 @@
+{
+  "name": "space-launch",
+  "version": "1.0.0",
+  "description": "Live rocket-launch tracker for Florida's Space Coast — calendar, mission tracking, ISS, space news, and reminders.",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod --dir=."
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

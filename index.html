@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Space Launch — Live U.S. Rocket Launch Tracker</title>
+<meta name="description" content="Track every rocket launch across the United States — featuring Florida's Space Coast, plus Vandenberg, Starbase, Wallops and more. Live countdowns, launch calendar, mission tracking, ISS data, space news, and reminders." />
+<meta name="theme-color" content="#05060e" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305060e'/%3E%3Ccircle cx='16' cy='16' r='6.5' fill='%235ce1ff'/%3E%3Cellipse cx='16' cy='16' rx='12' ry='3.6' fill='none' stroke='%23b585ff' stroke-width='1.7' transform='rotate(-25 16 16)'/%3E%3Ccircle cx='24' cy='7' r='1.3' fill='%23fff'/%3E%3Ccircle cx='6' cy='10' r='1' fill='%23fff'/%3E%3C/svg%3E" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Sora:wght@300;400;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<!-- Leaflet (live ISS map) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body data-view="home">
+
+<!-- Atmosphere layers -->
+<canvas id="starfield" aria-hidden="true"></canvas>
+<div class="nebula" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ░░ LIVE TICKER ░░ -->
+<div class="ticker" id="ticker" aria-label="Live space updates">
+  <span class="ticker__label"><span class="ticker__dot"></span>LIVE</span>
+  <div class="ticker__viewport">
+    <div class="ticker__track" id="ticker-track">
+      <div class="tk-set"><span class="tk-item tk-item--wx">Tuning in to the latest from across U.S. spaceflight…</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ░░ NAV ░░ -->
+<header class="nav">
+  <a href="#home" class="brand" aria-label="Space Launch home">
+    <span class="brand__mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="28" height="28">
+        <path d="M16 2c5 4 7 9 7 15 0 4-1 7-3 10l-4-3-4 3c-2-3-3-6-3-10 0-6 2-11 7-15z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="16" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M9 24l-4 5 6-2M23 24l4 5-6-2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      </svg>
+    </span>
+    <span class="brand__text">
+      <span class="brand__name">SPACE&nbsp;LAUNCH</span>
+      <span class="brand__sub">Florida&nbsp;·&nbsp;Space&nbsp;Coast</span>
+    </span>
+  </a>
+
+  <nav class="nav__links" id="nav-links">
+    <a href="#home"      data-view="home">Mission&nbsp;Control</a>
+    <a href="#calendar"  data-view="calendar">Calendar</a>
+    <a href="#sites"     data-view="sites">Launch&nbsp;Sites</a>
+    <a href="#live"      data-view="live">Live</a>
+    <a href="#stations"  data-view="stations">Stations</a>
+    <a href="#news"      data-view="news">Space&nbsp;News</a>
+    <a href="#reminders" data-view="reminders">Reminders</a>
+  </nav>
+
+  <button class="nav__toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<main>
+
+<!-- ░░ HOME / MISSION CONTROL ░░ -->
+<section id="view-home" class="view view--active">
+  <div class="hero">
+    <p class="hero__eyebrow">
+      <span class="pulse-dot"></span>
+      <span id="hero-eyebrow">Acquiring launch data…</span>
+    </p>
+    <h1 class="hero__mission" id="hero-mission">Standing&nbsp;by</h1>
+    <p class="hero__vehicle" id="hero-vehicle">—</p>
+
+    <div class="countdown" id="hero-countdown" aria-live="polite">
+      <div class="cd-unit"><b class="cd-num" data-cd="d">--</b><span class="cd-lbl">days</span></div>
+      <i class="cd-sep">:</i>
+      <div class="cd-unit"><b class="cd-num" data-cd="h">--</b><span class="cd-lbl">hrs</span></div>
+      <i class="cd-sep">:</i>
+      <div class="cd-unit"><b class="cd-num" data-cd="m">--</b><span class="cd-lbl">min</span></div>
+      <i class="cd-sep">:</i>
+      <div class="cd-unit"><b class="cd-num" data-cd="s">--</b><span class="cd-lbl">sec</span></div>
+    </div>
+
+    <p class="hero__meta" id="hero-meta">Connecting to the range…</p>
+
+    <div class="hero__actions">
+      <button class="btn btn--primary" id="hero-details">Launch Details</button>
+      <a class="btn btn--ghost" id="hero-watch" target="_blank" rel="noopener" hidden>▶ Watch Live</a>
+      <button class="btn btn--ghost" id="hero-remind">◷ Remind Me</button>
+    </div>
+  </div>
+
+  <div class="home-grid">
+    <article class="panel panel--span2">
+      <header class="panel__head">
+        <h2>On the Pad — Space Coast</h2>
+        <a href="#site/space-coast" class="panel__more">All Space Coast launches →</a>
+      </header>
+      <div class="upnext" id="home-upnext"><p class="muted">Loading manifest…</p></div>
+    </article>
+
+    <article class="panel">
+      <header class="panel__head"><h2>Station Status</h2></header>
+      <div id="home-station"><p class="muted">Pinging orbit…</p></div>
+    </article>
+
+    <article class="panel panel--span3">
+      <header class="panel__head">
+        <h2>Launching Across America</h2>
+        <a href="#sites" class="panel__more">All launch sites →</a>
+      </header>
+      <div id="home-usa"><p class="muted">Mapping the nation's spaceports…</p></div>
+    </article>
+
+    <article class="panel panel--span3">
+      <header class="panel__head">
+        <h2>Latest from the Cosmos</h2>
+        <a href="#news" class="panel__more">More news →</a>
+      </header>
+      <div class="home-news" id="home-news"><p class="muted">Tuning the deep-space antenna…</p></div>
+    </article>
+  </div>
+</section>
+
+<!-- ░░ CALENDAR ░░ -->
+<section id="view-calendar" class="view">
+  <div class="view__head">
+    <h1 class="view__title">Launch Calendar</h1>
+    <p class="view__sub">Every scheduled U.S. launch — Space Coast missions are highlighted. Click any launch for full mission details.</p>
+  </div>
+  <div class="cal">
+    <div class="cal__bar">
+      <button class="cal__nav" id="cal-prev" aria-label="Previous month">‹</button>
+      <h2 class="cal__month" id="cal-month">—</h2>
+      <button class="cal__nav" id="cal-next" aria-label="Next month">›</button>
+      <button class="cal__today" id="cal-today">Today</button>
+    </div>
+    <div class="filters" id="cal-scope">
+      <button class="chip chip--on" data-scope="all">All U.S. launches</button>
+      <button class="chip" data-scope="space-coast">🌴 Space Coast only</button>
+    </div>
+    <div class="cal__dows">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div class="cal__grid" id="cal-grid"></div>
+    <p class="cal__legend">
+      <span class="dot dot--go"></span> Go for launch
+      <span class="dot dot--tbd"></span> Date to be confirmed
+      <span class="dot dot--done"></span> Completed
+      <span class="dot dot--coast"></span> Space Coast launch
+    </p>
+  </div>
+</section>
+
+<!-- ░░ LAUNCH SITES — directory ░░ -->
+<section id="view-sites" class="view">
+  <div class="view__head">
+    <h1 class="view__title">U.S. Launch Sites</h1>
+    <p class="view__sub">Florida's Space Coast is our home base — but rockets fly from spaceports all across America. Choose a site to see its missions and where to watch.</p>
+  </div>
+  <div id="sites-featured"><div class="spinner"></div></div>
+  <div class="sites-grid" id="sites-grid"></div>
+</section>
+
+<!-- ░░ LAUNCH SITES — single site sub-page ░░ -->
+<section id="view-site" class="view">
+  <div id="site-page"><div class="spinner"></div></div>
+</section>
+
+<!-- ░░ LIVE ░░ -->
+<section id="view-live" class="view">
+  <div class="view__head">
+    <h1 class="view__title">Live Tracking</h1>
+    <p class="view__sub">Real-time mission status and the International Space Station, tracked live as it orbits Earth.</p>
+  </div>
+
+  <article class="panel live-now" id="live-now">
+    <p class="muted">Checking the range for active operations…</p>
+  </article>
+
+  <article class="panel">
+    <header class="panel__head">
+      <h2>ISS — Live Orbital Track</h2>
+      <span class="tag tag--live" id="iss-livetag">● TRACKING</span>
+    </header>
+    <div id="iss-map" class="iss-map"></div>
+    <div class="telemetry" id="iss-telemetry">
+      <div class="tele"><span class="tele__k">Latitude</span><span class="tele__v" data-iss="lat">—</span></div>
+      <div class="tele"><span class="tele__k">Longitude</span><span class="tele__v" data-iss="lon">—</span></div>
+      <div class="tele"><span class="tele__k">Altitude</span><span class="tele__v" data-iss="alt">—</span></div>
+      <div class="tele"><span class="tele__k">Velocity</span><span class="tele__v" data-iss="vel">—</span></div>
+      <div class="tele"><span class="tele__k">Footprint</span><span class="tele__v" data-iss="fp">—</span></div>
+      <div class="tele"><span class="tele__k">In sunlight</span><span class="tele__v" data-iss="vis">—</span></div>
+    </div>
+  </article>
+
+  <article class="panel">
+    <header class="panel__head"><h2>Recent Launch Results</h2></header>
+    <div class="recent" id="live-recent"><p class="muted">Pulling flight log…</p></div>
+  </article>
+</section>
+
+<!-- ░░ STATIONS ░░ -->
+<section id="view-stations" class="view">
+  <div class="view__head">
+    <h1 class="view__title">Space Stations</h1>
+    <p class="view__sub">The orbiting outposts where humans live and work — specs, crews, facts, and live status.</p>
+  </div>
+  <div class="stations" id="stations-list"><p class="muted">Establishing uplink…</p></div>
+</section>
+
+<!-- ░░ NEWS ░░ -->
+<section id="view-news" class="view">
+  <div class="view__head">
+    <h1 class="view__title">Space News &amp; Discoveries</h1>
+    <p class="view__sub">Fresh dispatches from across spaceflight, astronomy, and exploration.</p>
+  </div>
+  <div class="news-grid" id="news-grid"><p class="muted">Tuning the deep-space antenna…</p></div>
+  <div class="news-more"><button class="btn btn--ghost" id="news-more">Load more stories</button></div>
+</section>
+
+<!-- ░░ REMINDERS ░░ -->
+<section id="view-reminders" class="view">
+  <div class="view__head">
+    <h1 class="view__title">Never Miss a Launch</h1>
+    <p class="view__sub">Pick how you want to be reminded. Calendar and browser alerts work instantly — email &amp; text need the optional backend switched on.</p>
+  </div>
+
+  <div class="rem-grid">
+
+    <article class="panel rem-card">
+      <span class="rem-card__num">01</span>
+      <h2>Add to Your Calendar</h2>
+      <p>Drop any launch straight into Apple Calendar, Google Calendar, or Outlook. Your phone handles the reminder — works on every device, no signup.</p>
+      <label class="field">
+        <span>Choose a launch</span>
+        <select id="rem-ics-select"><option>Loading launches…</option></select>
+      </label>
+      <button class="btn btn--primary" id="rem-ics-btn">↓ Download Calendar Event</button>
+    </article>
+
+    <article class="panel rem-card">
+      <span class="rem-card__num">02</span>
+      <h2>Browser Notifications</h2>
+      <p>Get a pop-up alert from this browser before liftoff. Keep this page bookmarked — alerts fire while it's open or in a background tab.</p>
+      <label class="field">
+        <span>Choose a launch</span>
+        <select id="rem-notif-select"><option>Loading launches…</option></select>
+      </label>
+      <label class="field">
+        <span>Alert me</span>
+        <select id="rem-notif-lead">
+          <option value="60">1 hour before</option>
+          <option value="180">3 hours before</option>
+          <option value="1440">1 day before</option>
+        </select>
+      </label>
+      <button class="btn btn--primary" id="rem-notif-btn">⤺ Enable Browser Alert</button>
+      <p class="rem-status" id="rem-notif-status"></p>
+    </article>
+
+    <article class="panel rem-card rem-card--wide">
+      <span class="rem-card__num">03</span>
+      <h2>Email &amp; Text Reminders</h2>
+      <p>Get an automatic email or text message before a launch — even when this page is closed. Choose a single mission or subscribe to every Space Coast launch.</p>
+      <form id="rem-form" class="rem-form">
+        <div class="rem-form__row">
+          <label class="field">
+            <span>Send via</span>
+            <select id="rem-channel">
+              <option value="email">Email</option>
+              <option value="sms">Text message (SMS)</option>
+            </select>
+          </label>
+          <label class="field" id="rem-contact-field">
+            <span id="rem-contact-label">Email address</span>
+            <input type="text" id="rem-contact" placeholder="you@example.com" autocomplete="off" />
+          </label>
+        </div>
+        <div class="rem-form__row">
+          <label class="field">
+            <span>Remind me about</span>
+            <select id="rem-scope">
+              <option value="all">Every U.S. launch</option>
+              <option value="space-coast">Every Space Coast launch</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>How early</span>
+            <select id="rem-lead">
+              <option value="60">1 hour before</option>
+              <option value="180">3 hours before</option>
+              <option value="720">12 hours before</option>
+              <option value="1440" selected>1 day before</option>
+            </select>
+          </label>
+        </div>
+        <button class="btn btn--primary" type="submit" id="rem-submit">Set My Reminder</button>
+        <p class="rem-status" id="rem-form-status"></p>
+      </form>
+    </article>
+
+  </div>
+</section>
+
+</main>
+
+<!-- ░░ LAUNCH DETAIL MODAL ░░ -->
+<div class="modal" id="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__card" role="document">
+    <button class="modal__x" data-close aria-label="Close">✕</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ░░ FOOTER ░░ -->
+<footer class="foot">
+  <div class="foot__inner">
+    <p class="foot__brand">SPACE LAUNCH</p>
+    <p class="foot__note">
+      A live tracker for every U.S. rocket launch — featuring Florida's Space Coast
+      (Cape Canaveral &amp; Kennedy Space Center), plus Vandenberg, Starbase, Wallops and more.
+      The best free Space Coast viewing is around Titusville, Playalinda Beach, and Jetty Park.
+    </p>
+    <p class="foot__credit">
+      Launch data: The Space Devs · News: Spaceflight News API · ISS: WhereTheISS.at ·
+      Built for clear skies and good launches. 🚀
+    </p>
+  </div>
+</footer>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- App -->
+<script src="js/config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/launches.js"></script>
+<script src="js/live.js"></script>
+<script src="js/stations.js"></script>
+<script src="js/news.js"></script>
+<script src="js/reminders.js"></script>
+<script src="js/ticker.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
