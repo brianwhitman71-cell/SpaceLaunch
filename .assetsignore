@@ -1,0 +1,13 @@
+.git
+.gitignore
+.assetsignore
+.netlify
+.DS_Store
+node_modules
+wrangler.jsonc
+src
+netlify
+netlify.toml
+package.json
+package-lock.json
+README.md

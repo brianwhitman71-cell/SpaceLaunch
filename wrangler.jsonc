@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "spacelaunch",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "assets": { "directory": ".", "binding": "ASSETS" },
+  "kv_namespaces": [
+    { "binding": "SUBSCRIBERS", "id": "84b3f1ed9d4f4f51be9876e765a74a18" }
+  ],
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  }
+}
